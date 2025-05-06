@@ -1,0 +1,43 @@
+// EasyLink Protocol Example: Master Sending CMD_READ to Node 1
+// This is conceptual pseudocode, not specific to any language or MCU.
+
+// --- Define Packet Constants (Master Side) ---
+START_BYTE = 0xAA
+END_BYTE   = 0x55
+MASTER_FW_VERSION = 0x01
+MASTER_ID = 0x00 // Master's "address" for sending
+
+// --- Command to Send ---
+TARGET_NODE_ID = 0x01
+COMMAND_TO_SEND = 0x03 // CMD_READ
+
+// Generate a unique Message ID for this transaction
+currentMessageID = get_next_message_id(); // e.g., increments 1-254
+
+// --- Assemble Packet (CMD_READ has no payload from Master) ---
+packet_buffer = []
+
+packet_buffer.append(START_BYTE)
+packet_buffer.append(TARGET_NODE_ID)
+packet_buffer.append(MASTER_FW_VERSION)
+packet_buffer.append(currentMessageID)
+packet_buffer.append(COMMAND_TO_SEND)
+
+// Calculate Checksum (from Target ID to Command Code)
+// Checksum = TARGET_NODE_ID ^ MASTER_FW_VERSION ^ currentMessageID ^ COMMAND_TO_SEND
+checksum_value = calculate_xor_checksum(packet_buffer, offset=1, length=4)
+packet_buffer.append(checksum_value)
+
+packet_buffer.append(END_BYTE)
+
+// --- Send Packet over RS485 ---
+// 1. Set RS485 transceiver to Transmit Mode
+// 2. Send all bytes from packet_buffer
+// 3. Wait for transmission to complete
+// 4. Set RS485 transceiver back to Receive Mode
+// 5. Start a timer to wait for an ACK or Data Response from Node 1 for currentMessageID
+
+// --- Expected Response from Node ---
+// The Master now listens for a packet that is either:
+// - An ACK: [0xAA][0x01][NodeFW][currentMessageID][CMD_ACK][ACK_Checksum][0x55]
+// - A Data Response: [0xAA][0x01][NodeFW][currentMessageID][CMD_READ][Payload...][Data_Checksum][0x55]

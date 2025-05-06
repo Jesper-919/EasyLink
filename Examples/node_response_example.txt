@@ -1,0 +1,83 @@
+// EasyLink Protocol Example: Node 1 Responding to CMD_READ
+// This is conceptual pseudocode for the Node (ATmega328P).
+
+// --- Define Node Constants ---
+START_BYTE = 0xAA
+END_BYTE   = 0x55
+NODE_FW_VERSION = 0x01
+MY_NODE_ID = 0x01 // Assuming this node is ID 1
+
+// Command Codes
+CMD_ACK = 0x09
+CMD_READ = 0x03 // Echoing the command it's responding to
+
+// Assume Master sent a CMD_READ with a specific `receivedMessageID`
+
+// --- Step 1: Node sends ACK (if protocol requires ACK before data) ---
+// This step might be combined if data response itself acts as implicit ACK.
+// For this example, let's assume explicit ACK first.
+
+ack_packet_buffer = []
+ack_packet_buffer.append(START_BYTE)
+ack_packet_buffer.append(MY_NODE_ID)      // Sender is this Node
+ack_packet_buffer.append(NODE_FW_VERSION)
+ack_packet_buffer.append(receivedMessageID) // Echo Master's MsgID
+ack_packet_buffer.append(CMD_ACK)
+
+// Checksum for ACK packet = MY_NODE_ID ^ NODE_FW_VERSION ^ receivedMessageID ^ CMD_ACK
+ack_checksum = calculate_xor_checksum(ack_packet_buffer, offset=1, length=4)
+ack_packet_buffer.append(ack_checksum)
+ack_packet_buffer.append(END_BYTE)
+
+// Send ACK packet over RS485...
+
+// --- Step 2: Node reads its sensors and prepares data response ---
+temperature_float = 25.7  // Example float
+soil_moisture_int = 512   // Example integer
+light_level_int = 830     // Example integer
+
+// Convert float to 4 bytes (e.g., IEEE 754, Big Endian for words)
+// Example: 25.7f -> 0x41CD999A
+temp_byte_1 = 0x41
+temp_byte_2 = 0xCD
+temp_byte_3 = 0x99
+temp_byte_4 = 0x9A
+
+// Convert integers to 2 bytes each (High Byte first)
+// Example: 512 -> 0x0200
+soil_byte_1_HB = 0x02
+soil_byte_2_LB = 0x00
+
+// Example: 830 -> 0x033E
+light_byte_1_HB = 0x03
+light_byte_2_LB = 0x3E
+
+payload_data = [temp_byte_1, temp_byte_2, temp_byte_3, temp_byte_4,
+                soil_byte_1_HB, soil_byte_2_LB,
+                light_byte_1_HB, light_byte_2_LB]
+payload_length = 8
+
+// --- Assemble Data Response Packet ---
+data_packet_buffer = []
+data_packet_buffer.append(START_BYTE)
+data_packet_buffer.append(MY_NODE_ID)      // Sender is this Node
+data_packet_buffer.append(NODE_FW_VERSION)
+data_packet_buffer.append(receivedMessageID) // Echo Master's original MsgID
+data_packet_buffer.append(CMD_READ)          // Indicate this is a response to CMD_READ
+
+// Append payload
+for byte in payload_data:
+    data_packet_buffer.append(byte)
+
+// Calculate Checksum (from Sender ID to last payload byte)
+// Checksum = MY_NODE_ID ^ NODE_FW_VERSION ^ receivedMessageID ^ CMD_READ ^ payload_byte_1 ^ ...
+data_checksum = calculate_xor_checksum(data_packet_buffer, offset=1, length=(4 + payload_length))
+data_packet_buffer.append(data_checksum)
+
+data_packet_buffer.append(END_BYTE)
+
+// --- Send Data Response Packet over RS485 ---
+// 1. Set RS485 transceiver to Transmit Mode
+// 2. Send all bytes from data_packet_buffer
+// 3. Wait for transmission to complete
+// 4. Set RS485 transceiver back to Receive Mode

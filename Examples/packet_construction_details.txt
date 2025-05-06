@@ -1,0 +1,87 @@
+EasyLink Protocol: Example Packet Construction
+
+This example details the construction of a Master's CMD_READ request to Node 1
+and the Node's subsequent sensor data response.
+
+--------------------------------------------------
+1. Master Request: CMD_READ to Node 1
+--------------------------------------------------
+Assumptions:
+- Master Firmware Version: 0x01
+- Master's generated Message ID (MsgID): 0x42
+- Target Node ID: 0x01
+- Command: CMD_READ (0x03)
+- Payload: None for this command from Master.
+
+Packet Fields:
+- Start Byte:     0xAA
+- Target ID:      0x01
+- FW Version:     0x01 (Master's FW)
+- Message ID:     0x42
+- Command:        0x03 (CMD_READ)
+- Payload:        (empty)
+- Checksum:       Calculated below
+- End Byte:       0x55
+
+Checksum Calculation (XOR of bytes from Target ID to last Payload byte):
+Bytes to XOR: [Target ID, FW Version, MsgID, Command]
+0x01 ^ 0x01 ^ 0x42 ^ 0x03
+
+Step 1: 0x01 ^ 0x01 = 0x00
+Step 2: 0x00 ^ 0x42 = 0x42
+Step 3: 0x42 ^ 0x03 = 0x41
+
+Checksum = 0x41
+
+Complete Master Request Packet (Hex):
+AA 01 01 42 03 41 55
+
+--------------------------------------------------
+2. Node 1 Response: Sensor Data for CMD_READ
+--------------------------------------------------
+Assumptions (after receiving Master's request with MsgID 0x42):
+- Node 1 ID: 0x01
+- Node 1 Firmware Version: 0x01
+- Echoed Message ID: 0x42
+- Command: CMD_READ (0x03) - indicating type of data
+- Payload (8 bytes):
+    - Temperature (float 25.7 Celsius = 0x41CD999A): 41 CD 99 9A
+    - Soil Moisture (uint16 512 = 0x0200): 02 00
+    - Light Level (uint16 830 = 0x033E): 03 3E
+
+Packet Fields:
+- Start Byte:     0xAA
+- Sender ID:      0x01 (Node 1's ID)
+- FW Version:     0x01 (Node 1's FW)
+- Message ID:     0x42 (Echoed from Master)
+- Command:        0x03 (CMD_READ response)
+- Payload (8 bytes):41 CD 99 9A 02 00 03 3E
+- Checksum:       Calculated below
+- End Byte:       0x55
+
+Checksum Calculation (XOR of bytes from Sender ID to last Payload byte):
+Bytes to XOR: [SenderID, FW Ver, MsgID, Cmd, P0, P1, P2, P3, P4, P5, P6, P7]
+0x01 ^ 0x01 ^ 0x42 ^ 0x03 ^ 0x41 ^ 0xCD ^ 0x99 ^ 0x9A ^ 0x02 ^ 0x00 ^ 0x03 ^ 0x3E
+
+0x01 ^ 0x01 = 0x00
+0x00 ^ 0x42 = 0x42
+0x42 ^ 0x03 = 0x41
+0x41 ^ 0x41 = 0x00
+0x00 ^ 0xCD = 0xCD
+0xCD ^ 0x99 = 0x54 (CD=11001101, 99=10011001, XOR=01010100=54)
+0x54 ^ 0x9A = 0xCE (54=01010100, 9A=10011010, XOR=11001110=CE)
+0xCE ^ 0x02 = 0xCC
+0xCC ^ 0x00 = 0xCC
+0xCC ^ 0x03 = 0xCF
+0xCF ^ 0x3E = 0xF1 (CF=11001111, 3E=00111110, XOR=11110001=F1)
+
+Checksum = 0xF1
+
+Complete Node Response Packet (Hex):
+AA 01 01 42 03 41 CD 99 9A 02 00 03 3E F1 55
+
+--------------------------------------------------
+Notes:
+- Float byte order assumed: High Word first, High Byte of word first.
+- Integer byte order assumed: High Byte first.
+- These are examples; actual checksums and data will vary.
