@@ -138,7 +138,7 @@ This sequence allows nodes to obtain unique IDs based on their physical position
 3.  **Master Pulses `ASSIGN_MASTER_OUT_PIN`:** Briefly pulses its `ASSIGN_MASTER_OUT_PIN` HIGH.
 4.  **Nodes Check/Assign Sequentially:**
     *   Each node waits for its `ASSIGN_IN_PIN` to go HIGH.
-    *   If `myID == 0` (e.g., a newly inserted node): Proceeds with initial assignment as in 6.1.4.
+    *   If `myID == 0` (e.g., a newly inserted node): Proceeds with an initial assignment as in 6.1.4.
     *   If `myID != 0` AND `recheckIDFlag` is true:
         *   It calculates `expectedID = lastBroadcastedID + 1`.
         *   If `myID != expectedID`, it updates its `myID` to `expectedID` and saves it to EEPROM.
